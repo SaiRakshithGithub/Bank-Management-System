@@ -1,0 +1,203 @@
+from prettytable import PrettyTable
+import mysql.connector
+
+mydatabase = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="@123Sai#cse",
+    database="rakshith"
+)
+
+mycursor = mydatabase.cursor()
+
+mycursor.execute("CREATE TABLE IF NOT EXISTS signup(username VARCHAR(30), password VARCHAR(30))")
+
+
+# Signup function
+def signup():
+    username = input("USERNAME:")
+    password = input("PASSWORD:")
+    mycursor.execute("INSERT INTO signup VALUES(%s, %s)", (username, password))
+    mydatabase.commit()
+    print("\t\t\t************************+++SIGNUP SUCCESSFULL+++*************************")
+    print("Now Please Login to continue")
+    login()
+
+
+# Login function
+def login():
+    username = input("USERNAME:")
+    password = input("PASSWORD:")
+
+    mycursor.execute("SELECT username FROM signup WHERE username = %s", (username,))
+    user1 = mycursor.fetchone()
+    mydatabase.commit()
+
+    mycursor.execute("SELECT password FROM signup WHERE password = %s", (password,))
+    pwd1 = mycursor.fetchone()
+    mydatabase.commit()
+
+    if user1 is None or pwd1 is None or user1[0] != username or pwd1[0] != password:
+        print("WRONG USERNAME OR PASSWORD!!!!!!")
+        f = 1
+        while True:
+            f = int(input("Press 1 to try again\nPress 2 for exit:"))
+            if f == 1:
+                login()
+            else:
+                exit()
+    else:
+        print("\t\t\t********************+++LOGIN SUCCESSFULL+++********************\n")
+        while True:
+            print("Press 1 for open new account")
+            print("Press 2 for deposit amount")
+            print("Press 3 for withdraw amount")
+            print("Press 4 for balance enquiry")
+            print("Press 5 for customer details")
+            print("Press 6 for information updation")
+            print("Press 7 for close account")
+            print("Press 8 for to show data")
+            print("Press any key for EXIT")
+            a = int(input("Enter what you want to do:"))
+            if a == 1:
+                openacc()
+            elif a == 2:
+                dep()
+            elif a == 3:
+                withdraw()
+            elif a == 4:
+                bal_enq()
+            elif a == 5:
+                cust_det()
+            elif a == 6:
+                update()
+            elif a == 7:
+                close()
+            elif a == 8:
+                show()
+            else:
+                print("\t\t\tThank you")
+                print("\t\t\tHave a Good Day")
+                break
+
+
+def openacc():
+    name = input("Enter full name of owner:")
+    acc_no = input("Enter account number:")
+    address = input("Enter permanent address of owner:")
+    contact_no = input("Enter contact number of owner:")
+    total_balance = int(input("Enter how much amount you want to deposit:"))
+    data1 = (name, acc_no, address, contact_no, total_balance)
+    data2 = (name, acc_no, total_balance)
+
+    mycursor.execute("CREATE TABLE IF NOT EXISTS acc(name VARCHAR(30), acc_no VARCHAR(60), address VARCHAR(30), contact_no VARCHAR(15), total_balance int)")
+    mycursor.execute("CREATE TABLE IF NOT EXISTS amount(name VARCHAR(30), acc_no VARCHAR(60), total_balance int)")
+
+    sql1 = 'INSERT INTO acc VALUES(%s,%s,%s,%s,%s)'
+    sql2 = 'INSERT INTO amount VALUES(%s,%s,%s)'
+    mycursor.execute(sql1, data1)
+    mycursor.execute(sql2, data2)
+
+    mydatabase.commit()
+    print("******************+++New account opened successfully!!!+++*****************\n")
+
+
+def dep():
+    acc_no = input("Enter account number:")
+    dep_am = input("Enter amount:")
+
+    mycursor.execute("UPDATE acc SET total_balance = total_balance + %s WHERE acc_no = %s", (dep_am, acc_no))
+    mycursor.execute("UPDATE amount SET total_balance = total_balance + %s WHERE acc_no = %s", (dep_am, acc_no))
+    mydatabase.commit()
+    print("Amount deposited successfully!!!!!!\n")
+
+
+def withdraw():
+    acc_no = input("Enter account number:")
+    w_am = input("Enter amount:")
+
+    mycursor.execute("SELECT total_balance FROM acc WHERE acc_no = %s", (acc_no,))
+    balance = mycursor.fetchone()[0]
+    mydatabase.commit()
+
+    if int(w_am) > int(balance):
+        print("Insufficient balance!!!!!!")
+    else:
+        mycursor.execute("UPDATE acc SET total_balance = total_balance - %s WHERE acc_no = %s", (w_am, acc_no))
+        mycursor.execute("UPDATE amount SET total_balance = total_balance - %s WHERE acc_no = %s", (w_am, acc_no))
+        mydatabase.commit()
+        print("***************+++Amount withdrawn successfully!!!+++****************\n")
+
+
+def bal_enq():
+    acc_no = input("Enter account number:")
+
+    mycursor.execute("SELECT total_balance FROM acc WHERE acc_no = %s", (acc_no,))
+    balance = mycursor.fetchone()[0]
+    mydatabase.commit()
+
+    print("Your balance is:", balance)
+
+
+def cust_det():
+    acc_no = input("Enter account number:")
+
+    mycursor.execute("SELECT * FROM acc WHERE acc_no = %s", (acc_no,))
+    data = mycursor.fetchall()
+    mydatabase.commit()
+
+    if len(data) == 0:
+        print("No such account exists!!!!!!")
+    else:
+        table = PrettyTable(['Name', 'Account No.', 'Address', 'Contact No.', 'Total Balance'])
+        for row in data:
+            table.add_row(row)
+        print(table)
+
+
+def update():
+    acc_no = input("Enter account number:")
+    name = input("Enter new name:")
+    address = input("Enter new address:")
+    contact_no = input("Enter new contact number:")
+
+    mycursor.execute("UPDATE acc SET name = %s, address = %s, contact_no = %s WHERE acc_no = %s",
+                     (name, address, contact_no, acc_no))
+    mydatabase.commit()
+    print("******************+++Information updated successfully!!!+++*****************")
+
+
+def close():
+    acc_no = input("Enter account number:")
+
+    mycursor.execute("DELETE FROM acc WHERE acc_no = %s", (acc_no,))
+    mycursor.execute("DELETE FROM amount WHERE acc_no = %s", (acc_no,))
+    mydatabase.commit()
+    print("******************+++Account closed successfully!!!+++******************\n")
+
+
+def show():
+    mycursor.execute("SELECT * FROM acc")
+    data = mycursor.fetchall()
+    mydatabase.commit()
+
+    if len(data) == 0:
+        print("No accounts exist!!!!!!")
+    else:
+        table = PrettyTable(['Name', 'Account No.', 'Address', 'Contact No.', 'Total Balance'])
+        for row in data:
+            table.add_row(row)
+        print(table)
+
+
+# Start of the program
+print("--------------***BANK MANAGEMENT SYSTEM***-----------------\n\n")
+print("\t1:SIGN UP\n\t2:LOGIN")
+choice = int(input("Enter your choice:"))
+
+if choice == 1:
+    signup()
+elif choice == 2:
+    login()
+else:
+    print("Invalid choice!!!!!!")
